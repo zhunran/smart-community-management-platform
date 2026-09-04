@@ -33,6 +33,8 @@ property-management（父 POM，JDK 25 / Spring Boot 4.1.0）
 ├── property-module-notification 业务层：邮件通知、社区公告
 ├── property-module-statistic    业务层：财务报表统计、操作审计
 ├── property-module-ai           业务层：AI 客服（DeepSeek + Function Calling）
+├── property-module-community    业务层：社区活动、论坛、投票
+├── property-module-lifeservice  业务层：报修工单、访客通行、场地预约
 ├── property-admin-api           管理端 API（端口 8081）
 ├── property-owner-api           业主端 API（端口 8084）
 ├── property-task                定时任务执行器（XXL-Job，端口 8083）
@@ -40,14 +42,14 @@ property-management（父 POM，JDK 25 / Spring Boot 4.1.0）
 └── property-owner-web           业主端前端（Vue3 + Vant 移动端）
 ```
 
-共 13 个 Maven 子模块，按职责分为四层：
+共 15 个 Maven 子模块，按职责分为四层：
 
-| 分层   | 模块                                                                | 职责                                    |
-| ------ | ------------------------------------------------------------------- | --------------------------------------- |
-| 公共层 | common, framework                                                   | 数据定义、基础设施（JWT/AOP/异常/配置） |
-| 业务层 | housing, owner, bill, payment, parking, notification, statistic, ai | 各业务域的 Entity/Mapper/Service        |
-| 入口层 | admin-api, owner-api, task                                          | REST API 聚合 + 定时任务执行器          |
-| 前端层 | admin-web, owner-web                                                | PC 管理后台 + 移动端业主端              |
+| 分层   | 模块                                                                                        | 职责                                    |
+| ------ | ------------------------------------------------------------------------------------------- | --------------------------------------- |
+| 公共层 | common, framework                                                                           | 数据定义、基础设施（JWT/AOP/异常/配置） |
+| 业务层 | housing, owner, bill, payment, parking, notification, statistic, ai, community, lifeservice | 各业务域的 Entity/Mapper/Service        |
+| 入口层 | admin-api, owner-api, task                                                                  | REST API 聚合 + 定时任务执行器          |
+| 前端层 | admin-web, owner-web                                                                        | PC 管理后台 + 移动端业主端              |
 
 ## 核心功能
 
@@ -66,6 +68,18 @@ property-management（父 POM，JDK 25 / Spring Boot 4.1.0）
 - 支付宝在线缴费
 - 社区公告查看
 - AI 智能客服（流式 SSE 对话，支持查询账单、房屋、公告等）
+
+### 社区互动
+
+- 社区活动：活动发布 / 取消、报名 / 取消报名、我的报名
+- 论坛：帖子发布与审核、两级评论树（父评论 + 子回复）、点赞去重、置顶 / 精华 / 软删除
+- 社区投票：投票发起 / 开始 / 结束、业主投票、结果统计
+
+### 便民服务
+
+- 报修工单：提交 → 审核 → 派单 → 接单 → 完成 → 评价 全流程，支持工单统计
+- 访客邀请：业主生成访客通行证，门岗核验
+- 场地预约：场地管理、可预约时段查询、在线预约 / 取消
 
 ### 自动化
 
