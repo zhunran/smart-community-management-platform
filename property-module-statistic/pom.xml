@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.property</groupId>
+        <artifactId>property-management</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>property-module-statistic</artifactId>
+    <description>统计模块——财务缴费趋势统计 + 操作审计统计（报表聚合）</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 内部模块：framework 提供 SysOperationLog 审计数据，bill 提供 t_payment 缴费数据 -->
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-framework</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-module-bill</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- EasyExcel -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>easyexcel</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

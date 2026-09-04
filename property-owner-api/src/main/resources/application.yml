@@ -1,0 +1,96 @@
+server:
+  port: 8084
+  shutdown: graceful
+
+spring:
+  application:
+    name: property-owner-api
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/property_management?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 3s
+
+  # Spring AI 配置（DeepSeek，OpenAI 兼容协议）
+  ai:
+    # 不使用 Redis 向量库（无 JedisConnectionFactory），置为非 redis 值以跳过自动装配
+    vectorstore:
+      type: none
+    openai:
+      api-key: ${DEEPSEEK_API_KEY}
+      base-url: https://api.deepseek.com
+      chat:
+        temperature: 0.7
+        model: deepseek-v4-flash
+      embedding:
+        enabled: false
+
+mybatis-plus:
+  global-config:
+    banner: false
+    db-config:
+      id-type: ASSIGN_ID
+      table-underline: true
+      logic-delete-field: del_flag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: ${MYBATIS_LOG_IMPL}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED}
+    path: /swagger-ui/index.html
+
+knife4j:
+  enable: ${SWAGGER_ENABLED}
+  setting:
+    language: zh_cn
+    enable-after-script: true
+    enable-request-cache: true
+
+# Swagger 文档信息（可在不同 profile 中覆盖）
+swagger:
+  title: 物业管理收费系统 - 业主端 API
+  version: 2.0.0
+  description: 物业管理收费系统业主端接口文档
+  contact:
+    name: 物业系统开发团队
+    email: dev@property.com
+
+# JWT 配置（业主端）
+jwt:
+  secret: ${JWT_OWNER_SECRET}
+  expiration: ${JWT_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true  # 启用就绪探针 / 存活探针

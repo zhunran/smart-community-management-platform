@@ -1,0 +1,128 @@
+[
+  {
+    "issueTitle": "API 响应拦截器返回结构与类型泛型不匹配，导致全量使用 as any 绕过类型检查",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\utils\\request.ts",
+    "lineRange": "23-29",
+    "description": "响应拦截器返回的是 axios 响应体 `response.data`（即后端返回的完整 JSON 对象 `{ code, data, msg }`），但各 API 函数声明的泛型如 `request.post<OwnerLoginResponse>(...)` 却直接传入了业务数据类型。这导致 TypeScript 类型与实际运行时值不匹配——调用方不得不使用 `res.data as any` 来取值，完全丧失了类型安全。影响 auth.ts 第17行、bill.ts 第65/69行、payment.ts 第45/49/53行、profile.ts 第36/40行。",
+    "suggestion": "定义统一的 `ApiResponse<T>` 包装类型，API 函数使用 `request.post<ApiResponse<OwnerLoginResponse>>(...)`，或在拦截器中直接解包 `response.data.data` 返回（需配合业务状态码判断调整）。"
+  },
+  {
+    "issueTitle": "多处 API 调用后使用 as any 进行类型断言，丧失类型安全",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\stores\\owner.ts",
+    "lineRange": "15-15",
+    "description": "`owner.ts` 第15行使用 `res.data as any` 来获取登录响应数据，后续所有字段访问（`data.token`、`data.ownerId` 等）都没有编译期类型检查。同样的模式出现在 PaymentsView.vue 第77行、BillsView.vue 第72/83行、RecordsView.vue 第51行、ProfileView.vue 第48行、RoomsView.vue 第42行、BillDetailView.vue 第92行，共7处。",
+    "suggestion": "修复第1个问题后，消除所有 `as any`，让 TypeScript 编译器能正确推导响应数据类型。"
+  },
+  {
+    "issueTitle": "401 响应时未清理完整的 localStorage 业主信息，页面重载后状态残留",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\utils\\request.ts",
+    "lineRange": "36-38",
+    "description": "当收到 401 状态码时，拦截器仅删除 `owner_token` 和一个不存在的键 `owner_info`，但未清理 `owner_id`、`owner_name`、`owner_phone`。执行 `window.location.href = '/login'` 导致页面完全重载后，Pinia store 从 localStorage 重新初始化，此时 token 为空但 `owner_id`/`owner_name`/`owner_phone` 仍为旧值，造成状态不一致。",
+    "suggestion": "在 401 处理中调用 `useOwnerStore().logout()` 或显式清理所有 `owner_*` 相关的 localStorage 键。"
+  },
+  {
+    "issueTitle": "Pinia store 中耦合 UI 通知，违反关注点分离",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\stores\\owner.ts",
+    "lineRange": "27-27",
+    "description": "`owner.ts` 第27行在 store 的 `login` 方法中直接调用 `ElMessage.success('登录成功')`。Pinia store 是状态管理层，不应直接依赖 Element Plus 的 UI 组件。这导致 store 难以测试，也无法在非浏览器环境（如 SSR）中复用。",
+    "suggestion": "将 UI 通知移到调用方组件中（LoginView.vue），store 只负责状态变更和数据返回。"
+  },
+  {
+    "issueTitle": "LoginView 的 catch 块静默吞掉所有异常，调试困难",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\login\\LoginView.vue",
+    "lineRange": "96-98",
+    "description": "第96-98行的 catch 块完全为空，注释说"错误已在 loginApi / store 中处理"。但 `ownerStore.login` 方法本身也没有 try-catch，异常从 `loginApi` 直接抛出。响应拦截器确实会调用 `ElMessage.error()`，但 catch 为空意味着控制台也看不到任何错误信息，增加了调试难度，也容易导致 loading 状态异常。",
+    "suggestion": "至少在 catch 中打印日志 `console.error(e)`，以便开发时排查问题。"
+  },
+  {
+    "issueTitle": "路由守卫仅检查 token 字符串存在性，不验证有效性",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\router\\index.ts",
+    "lineRange": "59-63",
+    "description": "`beforeEach` 守卫只检查 `store.isLoggedIn()` 是否返回 truthy（即 token 字符串是否存在），没有验证 token 是否过期或被服务端撤销。如果用户本地存储了一个过期的 token，仍然能访问所有受保护页面，直到发送 API 请求时才收到 401。",
+    "suggestion": "在路由守卫中增加 token 过期校验（如解码 JWT 检查 exp 字段），或结合一个轻量级的 token 验证 API 调用。"
+  },
+  {
+    "issueTitle": "已登录用户仍可访问 /login 页面，缺少重定向",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\router\\index.ts",
+    "lineRange": "59-63",
+    "description": "路由守卫中，当 `requiresAuth === false`（即 /login 页面）时直接放行 `next()`。已登录用户在地址栏手动输入 /login 仍能看到登录页面，体验不佳。",
+    "suggestion": "在守卫中增加判断：如果 `to.path === '/login'` 且已登录，则重定向到首页 `next('/')`。"
+  },
+  {
+    "issueTitle": "BillsView 中多个函数缺少 catch 错误处理，异常未捕获",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\bills\\BillsView.vue",
+    "lineRange": "67-86",
+    "description": "`loadBills()`（第67-76行）和 `onPageChange()`（第78-86行）两个函数都使用了 `try/finally` 但没有 `catch` 块。如果 `getBillPage` API 调用失败，异常将未被处理，可能导致页面上一直显示 loading 状态（因为 `loading.value = false` 在 finally 中执行，但若 Promise reject 未被捕获，在 Vue 3 中会触发全局 unhandledrejection）。同样的问题也存在于 ProfileView.vue 第44-50行、RoomsView.vue 第38-44行、RecordsView.vue 第47-54行。",
+    "suggestion": "在所有 API 调用的地方增加 catch 块，至少添加错误日志或用户提示。"
+  },
+  {
+    "issueTitle": "PaymentView 支付弹窗可能被浏览器拦截",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\payment\\PaymentView.vue",
+    "lineRange": "79-83",
+    "description": "`window.open('', '_blank')` 在 `await createPayOrder(...)` 之后执行。由于 `await` 将执行上下文切出了用户事件触发的同步链，多数浏览器会将其视为非用户触发的弹窗并拦截。用户可能无法看到支付表单页面。",
+    "suggestion": "在用户点击"确认支付"时（在 await 之前）先打开空白窗口并保持引用，支付接口返回后再写入内容；或改用表单自动提交方式（在当前页面动态创建 form 并 submit）。"
+  },
+  {
+    "issueTitle": "PaymentView 提交支付后立即跳转成功页，未等待实际支付完成",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\payment\\PaymentView.vue",
+    "lineRange": "85-86",
+    "description": "调用 `createPayOrder` 创建支付订单后，代码立即执行 `selectedIds.value.clear()` 和 `router.push('/payment/success/...')`，而未等待用户实际在支付页面完成支付。如果用户在支付页面关闭浏览器或支付失败，前端仍显示"支付成功"。",
+    "suggestion": "改为轮询支付状态，或在支付完成后由后端回调通知前端跳转，而不是创建订单后立即跳转。"
+  },
+  {
+    "issueTitle": "PaymentView UI 支持多选账单但提示仅支持单笔支付",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\payment\\PaymentView.vue",
+    "lineRange": "71-71",
+    "description": "账单列表使用 checkbox 支持多选（`toggleBill` 允许添加多个 ID 到 `selectedIds` Set 中），但在第71行提交时检查 `selectedIds.value.size > 1` 并提示"暂仅支持单笔账单支付"。用户做了多选操作后才被告知不行，体验不好。",
+    "suggestion": "要么将 checkbox 改为 radio 以限制只能选一个，要么实现真正的多账单合并支付。"
+  },
+  {
+    "issueTitle": "BillsView 中"未缴费"标签页未传递明确的状态过滤参数",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\bills\\BillsView.vue",
+    "lineRange": "61-65",
+    "description": "`getStatusFilter()` 在 `activeTab === 'unpaid'` 时返回 `undefined`，这意味着向 API 发送的请求不携带 status 参数。如果后端将 undefined/null 解释为"返回所有"，则"未缴费"标签页会显示包括已缴清在内的所有账单，与标签含义不符。",
+    "suggestion": "明确传递需要过滤的状态值，如 `status: 0`（未缴费），或根据业务需要同时过滤状态0（未缴费）、1（部分缴费）、5（已逾期）。"
+  },
+  {
+    "issueTitle": "statusMap/statusName/statusTag 在三个组件中重复定义",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\bills\\BillsView.vue",
+    "lineRange": "57-59",
+    "description": "`statusMap`、`statusName()` 和 `statusTag()` 函数在 BillsView.vue（第57-59行）、BillDetailView.vue（第83-85行）和 PaymentView.vue（第60-62行）中重复定义，三处代码完全一致。重复代码增加了维护成本，如需新增状态类型需修改三处。",
+    "suggestion": "抽取到共享的常量/工具文件中，如 `src/utils/billStatus.ts`，各组件统一引用。"
+  },
+  {
+    "issueTitle": "RecordsView 使用 dangerouslyUseHTMLString 存在 XSS 风险",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\records\\RecordsView.vue",
+    "lineRange": "42-43",
+    "description": "`ElMessageBox.alert` 中使用了 `dangerouslyUseHTMLString: true`，虽然当前拼接的数据（`r.paymentNo`、`r.paymentAmount` 等）来自后端，不太可能包含恶意内容，但这仍然是一个安全反模式。如果任一字段未来被用于展示用户输入的内容，将直接导致 XSS 漏洞。而且该场景完全可以用非 HTML 方式实现（模板字符串中不含 HTML 标签）。",
+    "suggestion": "移除 `dangerouslyUseHTMLString: true`，改为使用模板字符串时配合 `innerText` 安全方式，或使用多个 `el-descriptions` item 分别展示。"
+  },
+  {
+    "issueTitle": "PaymentSuccessView 使用 $route 而非 useRoute() 组合式 API",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\views\\payment\\PaymentSuccessView.vue",
+    "lineRange": "12-12",
+    "description": "第12行模板中使用了 `{{ $route.params.paymentNo }}`，而在 `<script setup>` 中并未调用 `useRoute()`。虽然 `$route` 在 Vue 模板中默认可用，但与项目中其他视图组件（如 BillDetailView、PaymentView 使用 `useRoute()`）的写法不一致。",
+    "suggestion": "在 `<script setup>` 中调用 `const route = useRoute()` 并使用 `route.params.paymentNo`，保持项目风格一致。"
+  },
+  {
+    "issueTitle": "ownerId 从 localStorage 初始化时可能产生 NaN",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\stores\\owner.ts",
+    "lineRange": "9-9",
+    "description": "第9行 `Number(localStorage.getItem('owner_id') || '0')` 中，如果 `owner_id` 在 localStorage 中存在但值不是有效数字（例如被篡改或损坏），`Number()` 将返回 `NaN`，导致后续所有使用 `ownerId` 的地方行为异常。",
+    "suggestion": "使用 `parseInt(localStorage.getItem('owner_id'), 10) || 0` 或增加 `isNaN` 兜底校验。"
+  },
+  {
+    "issueTitle": "vite.config.ts 后端代理地址硬编码，缺少环境变量支持",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\vite.config.ts",
+    "lineRange": "15-16",
+    "description": "第16行后端代理目标地址 `http://localhost:8082` 硬编码在配置中，且整个项目没有 `.env` 环境变量文件。不同开发者的后端端口可能不同（如 8080），也不利于测试/生产环境的部署配置。",
+    "suggestion": "使用 `process.env.VITE_API_BASE_URL` 读取环境变量，并提供默认值。创建 `.env.development`、`.env.production` 等环境配置文件。"
+  },
+  {
+    "issueTitle": "退出登录时未将用户重定向到登录页面",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-web\\src\\stores\\owner.ts",
+    "lineRange": "31-40",
+    "description": "`logout()` 函数仅清除本地状态和 localStorage，未执行路由跳转。虽然 HomeView.vue 第66行在调用 `logout()` 后手动执行了 `router.push('/login')`，但如果其他地方直接调用 `ownerStore.logout()` 而忘记重定向，用户将停留在当前页面上看到空白状态。此外，401 拦截器（request.ts 第38行）用 `window.location.href = '/login'` 硬跳转，也未调用 store 的 logout，导致 store 状态未同步清除。",
+    "suggestion": "在 401 拦截器中调用 `useOwnerStore().logout()` 使状态同步清除；考虑将 logout 重定向逻辑集中到 store 中（通过传入 router 或使用事件机制）。"
+  }
+]

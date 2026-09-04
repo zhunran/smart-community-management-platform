@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.property</groupId>
+        <artifactId>property-management</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+
+    <artifactId>property-module-ai</artifactId>
+    <name>property-module-ai</name>
+    <description>AI 物业客服模块</description>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+    <dependencies>
+        <!-- 依赖 framework（可传递使用 Spring AI、Redis等） -->
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-framework</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-module-bill</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-module-owner</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-module-parking</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.property</groupId>
+            <artifactId>property-module-notification</artifactId>
+            <version>${project.parent.version}</version>
+        </dependency>
+        <!-- Spring AI OpenAI Starter（兼容 DeepSeek 等 OpenAI 协议模型） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+        <!-- RAG 相关（暂搁置，后续需要时取消注释即可）================================
+             Spring AI Redis 向量存储（RAG 可选，复用已有 Redis，零新容器）
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-redis</artifactId>
+        </dependency>
+             RAG 检索增强 Advisor（QuestionAnswerAdvisor）
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-vector-store-advisor</artifactId>
+        </dependency>
+        ============================================================================ -->
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+</project>

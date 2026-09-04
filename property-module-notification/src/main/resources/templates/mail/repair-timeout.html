@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>报修工单超时提醒</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background-color: #e67e22;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .header p {
+            margin: 8px 0 0;
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        .body {
+            padding: 30px;
+            color: #333;
+        }
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .alert-box {
+            background-color: #fff8f0;
+            border: 1px solid #f0cfa8;
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        .alert-box .label {
+            color: #e67e22;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .alert-box .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e67e22;
+            margin-top: 4px;
+        }
+        .notice {
+            font-size: 13px;
+            color: #888;
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #fcfcfc;
+            border-radius: 4px;
+            border-left: 3px solid #e67e22;
+        }
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px 30px;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+        .footer p {
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>报修工单超时提醒</h1>
+        <p th:text="${scanTime}">扫描时间</p>
+    </div>
+
+    <div class="body">
+        <div class="greeting">
+            管理员您好：
+        </div>
+
+        <p style="font-size:14px; line-height:1.8;">
+            系统在 <strong th:text="${scanTime}">扫描时间</strong> 的定时扫描中发现
+            <strong style="color:#e67e22;" th:text="${totalCount}">N</strong> 单报修工单处理超时，
+            请及时跟进处理。
+        </p>
+
+        <div class="alert-box">
+            <div class="label">超时工单总数</div>
+            <div class="value" th:text="${totalCount}">0</div>
+        </div>
+
+        <table style="width:100%; border-collapse:collapse; margin:20px 0;">
+            <tr>
+                <td style="padding:10px 12px; background-color:#f8f9fa; border-bottom:1px solid #eee;">待审核/待派单超时（超过24小时）</td>
+                <td style="padding:10px 12px; text-align:right; font-weight:bold; border-bottom:1px solid #eee;" th:text="${pendingCount}">0</td>
+            </tr>
+            <tr>
+                <td style="padding:10px 12px; background-color:#f8f9fa; border-bottom:1px solid #eee;">已派单未接单超时（超过48小时）</td>
+                <td style="padding:10px 12px; text-align:right; font-weight:bold; border-bottom:1px solid #eee;" th:text="${unacceptedCount}">0</td>
+            </tr>
+        </table>
+
+        <div class="notice">
+            <strong>说明：</strong><br>
+            1. 超时工单已在系统中标记"已超时"（timeout_flag=1）。<br>
+            2. 请登录物业管理后台查看并处理相关工单。<br>
+            3. 此邮件由系统自动发送，请勿回复。
+        </div>
+    </div>
+
+    <div class="footer">
+        <p><strong>物业管理处</strong></p>
+        <p>本邮件由物业管理系统自动发送</p>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,236 @@
+services:
+  # ==================== 基础设施 ====================
+  mysql:
+    image: mysql:8.0
+    container_name: pms-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: property_management
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ../sql/property_management.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ../sql/xxl-job-init.sql:/docker-entrypoint-initdb.d/02-xxl-job.sql:ro
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u",
+          "root",
+          "-p${MYSQL_PASSWORD}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    networks:
+      - pms-network
+
+  redis:
+    image: redis:8.0-alpine
+    container_name: pms-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    environment:
+      TZ: Asia/Shanghai
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pms-network
+
+  # ==================== 后端服务 ====================
+  admin-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE: property-admin-api
+    container_name: pms-admin-api
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_ADMIN_SECRET: ${JWT_ADMIN_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SWAGGER_ENABLED: "false"
+      MYBATIS_LOG_IMPL: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health/readiness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pms-network
+
+  owner-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE: property-owner-api
+    container_name: pms-owner-api
+    restart: unless-stopped
+    ports:
+      - "8084:8084"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_OWNER_SECRET: ${JWT_OWNER_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+      JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID}
+      ALIPAY_GATEWAY: ${ALIPAY_GATEWAY}
+      ALIPAY_MERCHANT_PRIVATE_KEY: ${ALIPAY_MERCHANT_PRIVATE_KEY}
+      ALIPAY_ALIPAY_PUBLIC_KEY: ${ALIPAY_ALIPAY_PUBLIC_KEY}
+      ALIPAY_NOTIFY_URL: ${ALIPAY_NOTIFY_URL}
+      ALIPAY_RETURN_URL: ${ALIPAY_RETURN_URL}
+      ALIPAY_RETURN_WEB_URL: ${ALIPAY_RETURN_WEB_URL}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SWAGGER_ENABLED: "false"
+      MYBATIS_LOG_IMPL: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health/readiness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pms-network
+
+  task:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        MODULE: property-task
+    container_name: pms-task
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_USER: ${MYSQL_USER:-root}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      XXL_JOB_ADMIN_ADDRESSES: http://xxl-job-admin:8080/xxl-job-admin
+      XXL_JOB_ACCESS_TOKEN: ${XXL_JOB_ACCESS_TOKEN}
+      LOG_PATH: ./logs
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      MYBATIS_LOG_IMPL: org.apache.ibatis.logging.nologging.NoLoggingImpl
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health/readiness"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - pms-network
+
+  # ==================== 前端服务 ====================
+  admin-web:
+    build:
+      context: ..
+      dockerfile: docker/admin-web.Dockerfile
+    container_name: pms-admin-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - admin-api
+    networks:
+      - pms-network
+
+  owner-web:
+    build:
+      context: ..
+      dockerfile: docker/owner-web.Dockerfile
+    container_name: pms-owner-web
+    restart: unless-stopped
+    ports:
+      - "81:80"
+    depends_on:
+      - owner-api
+    networks:
+      - pms-network
+
+  # ==================== XXL-Job 调度中心 ====================
+  xxl-job-admin:
+    image: xuxueli/xxl-job-admin:2.4.1
+    container_name: pms-xxl-job
+    restart: unless-stopped
+    ports:
+      - "9099:8080"
+    environment:
+      PARAMS: >
+        --spring.datasource.url=jdbc:mysql://mysql:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+        --spring.datasource.username=root
+        --spring.datasource.password=${MYSQL_PASSWORD}
+        --xxl.job.accessToken=${XXL_JOB_ACCESS_TOKEN}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - pms-network
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  pms-network:
+    driver: bridge

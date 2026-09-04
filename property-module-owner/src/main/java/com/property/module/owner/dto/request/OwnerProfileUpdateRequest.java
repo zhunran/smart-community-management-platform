@@ -1,0 +1,48 @@
+package com.property.module.owner.dto.request;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+import lombok.Data;
+
+import java.time.LocalDate;
+
+/**
+ * 业主端个人信息修改请求 DTO
+ */
+@Data
+public class OwnerProfileUpdateRequest {
+
+    @Schema(description = "业主姓名", example = "张三", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "业主姓名不能为空")
+    @Size(max = 100, message = "业主姓名长度不能超过100")
+    private String ownerName;
+
+    @Schema(description = "手机号", example = "13812345678", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "手机号不能为空")
+    @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
+    private String phone;
+
+    @Schema(description = "性别：0-未知 1-男 2-女", example = "1")
+    private Integer gender;
+
+    @Schema(description = "出生日期", example = "1990-01-01")
+    private LocalDate birthday;
+
+    @Schema(description = "电子邮箱", example = "zhangsan@example.com")
+    @Pattern(regexp = "^$|^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "邮箱格式不正确")
+    private String email;
+
+    @Schema(description = "紧急联系人", example = "李四")
+    @Size(max = 50, message = "紧急联系人长度不能超过50")
+    private String emergencyContact;
+
+    @Schema(description = "紧急联系电话", example = "13912345678")
+    @Pattern(regexp = "^$|^1[3-9]\\d{9}$", message = "紧急联系电话格式不正确")
+    private String emergencyPhone;
+
+    @Schema(description = "头像URL", example = "https://example.com/avatar.jpg")
+    @Size(max = 500, message = "头像URL长度不能超过500")
+    private String avatar;
+}

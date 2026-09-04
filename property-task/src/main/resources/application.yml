@@ -1,0 +1,83 @@
+server:
+  port: 8083
+  shutdown: graceful
+
+spring:
+  application:
+    name: property-task
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mail:
+    host: smtp.qq.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/property_management?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 3s
+
+mybatis-plus:
+  global-config:
+    banner: false
+    db-config:
+      id-type: ASSIGN_ID
+      table-underline: true
+      logic-delete-field: del_flag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.nologging.NoLoggingImpl}
+
+# ═══════════════════════════════════════════
+# XXL-Job 执行器配置
+# ═══════════════════════════════════════════
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://localhost:9099/xxl-job-admin}
+    executor:
+      appname: property-task
+      address:
+      ip: ${XXL_JOB_EXECUTOR_IP:}
+      port: 9999
+      logpath: ${LOG_PATH:./logs}/xxl-job/executor
+      logretentiondays: 30
+    accessToken: ${XXL_JOB_ACCESS_TOKEN}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true  # 启用就绪探针 / 存活探针

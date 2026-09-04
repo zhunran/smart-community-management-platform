@@ -1,0 +1,97 @@
+server:
+  port: 8081
+  shutdown: graceful
+
+spring:
+  application:
+    name: property-admin-api
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:3306/property_management?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    username: ${MYSQL_USER}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # Redis 配置
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5s
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+          max-wait: 3s
+
+  # Spring AI 相关：为管理员端预留 AI 基础设施（当前未实现具体功能），
+  # 配置 api-key 环境变量使 OpenAI 模型客户端正常初始化，避免启动失败。
+  # 后续如需补充 AI 功能，直接基于此配置扩展即可。
+  ai:
+    # 管理员端暂不使用 RAG（向量存储），关闭 Redis 向量存储自动装配
+    # （SelectVectorStore 条件：spring.ai.vectorstore.type = redis，matchIfMissing=true，须设非 "redis" 单值）
+    vectorstore:
+      type: none
+    openai:
+      api-key: ${DEEPSEEK_API_KEY}
+      base-url: https://api.deepseek.com
+      chat:
+        temperature: 0.7
+        model: deepseek-v4-flash
+
+mybatis-plus:
+  global-config:
+    banner: false
+    db-config:
+      id-type: ASSIGN_ID
+      table-underline: true
+      logic-delete-field: del_flag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: ${MYBATIS_LOG_IMPL}
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED}
+    path: /swagger-ui/index.html
+
+knife4j:
+  enable: ${SWAGGER_ENABLED}
+  setting:
+    language: zh_cn
+    enable-after-script: true
+    enable-request-cache: true
+
+# Swagger 文档信息（可在不同 profile 中覆盖）
+swagger:
+  title: 物业管理收费系统 API
+  version: 2.0.0
+  description: 物业管理收费系统后端接口文档
+  contact:
+    name: 物业系统开发团队
+    email: dev@property.com
+
+# JWT 配置（管理端）
+jwt:
+  secret: ${JWT_ADMIN_SECRET} # YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXowMTIzNDU2Nzg5YWJjZGVmZ2hpamtsbW5vcA
+  expiration: ${JWT_EXPIRATION}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true  # 启用就绪探针 / 存活探针

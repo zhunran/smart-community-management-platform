@@ -1,0 +1,184 @@
+[
+  {
+    "issueTitle": "RESTful API 路径命名风格不统一",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller",
+    "lineRange": "1-68",
+    "description": "各 Controller 的 @RequestMapping 路径不统一：/api/admin/building（单数）、/api/admin/room（单数）、/api/admin/unit（单数）、/api/admin/fee-item（单数）与 /api/admin/bills（复数）、/api/admin/payments（复数）混用。RESTful 规范建议统一使用复数名词（如 rooms、units、buildings）。",
+    "suggestion": "建议统一使用复数形式：/api/admin/buildings、/api/admin/rooms、/api/admin/units、/api/admin/fee-items、/api/admin/fee-standards。"
+  },
+  {
+    "issueTitle": "PUT 接口未使用资源 ID 路径变量",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminBuildingController.java",
+    "lineRange": "56-59",
+    "description": "AdminBuildingController.update() 使用 @PutMapping（无路径变量），通过请求体中的 id 字段标识资源。RESTful 规范要求 PUT /resources/{id} 通过 @PathVariable 传递资源 ID。相同的设计问题也存在于 AdminUnitController.update()、AdminRoomController.update()、AdminFeeItemController.update()、AdminFeeStandardController.update() 中。",
+    "suggestion": "将注解改为 @PutMapping(\"/{id}\")，通过 @PathVariable Long id 获取资源 ID，请求体只包含其他字段。"
+  },
+  {
+    "issueTitle": "DELETE 接口应返回 204 No Content",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminBuildingController.java",
+    "lineRange": "62-66",
+    "description": "Delete 操作（AdminBuildingController.delete、AdminUnitController.delete、AdminRoomController.delete、AdminOwnerController.delete、AdminFeeItemController.delete、AdminFeeStandardController.delete、AdminOwnerRoomController.unbind）返回 ApiResult.success()，HTTP 状态码为 200。RESTful 规范建议 DELETE 成功返回 204 No Content，无响应体。",
+    "suggestion": "将 Delete 方法返回类型改为 ResponseEntity<Void> 并 return ResponseEntity.noContent().build()。"
+  },
+  {
+    "issueTitle": "登录接口缺少暴力破解防护措施",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminAuthController.java",
+    "lineRange": "27-31",
+    "description": "AdminAuthController.login() 和 OwnerAuthController.login() 均无任何速率限制、验证码或失败次数锁定机制，攻击者可以进行暴力密码破解攻击。",
+    "suggestion": "建议添加登录验证码（如 Google Authenticator 或图形验证码）；添加 IP 级别的速率限制（如 Spring @RateLimiter 或 Sentinel）；实现连续失败登录锁定（如 Redis 记录失败次数，超限后临时禁止登录）。"
+  },
+  {
+    "issueTitle": "Excel 导入接口无文件大小和内容类型校验",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminPaymentController.java",
+    "lineRange": "71-84",
+    "description": "importPayments() 和 AdminOwnerExcelController.importExcel() 接受 MultipartFile 参数，但未对文件大小、MIME 类型做任何校验。攻击者可上传超大文件或非 Excel 文件导致内存溢出或解析异常。",
+    "suggestion": "添加 Spring 配置 spring.servlet.multipart.max-file-size=10MB；在 Controller 方法中校验文件 content-type（应为 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet）；在文件流读取前校验文件魔数。"
+  },
+  {
+    "issueTitle": "Excel 导入无事务保护，批量处理非原子性",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\excel\\PaymentOrderImportListener.java",
+    "lineRange": "77-109",
+    "description": "PaymentOrderImportListener.batchProcess() 对每条记录依次调用 billService.manualPayment()，无事务包裹。中间行失败不会回滚已成功的行，导致导入数据部分写入、部分失败，数据不一致。相同的设计问题存在于 OwnerImportListener.batchInsert() 中。",
+    "suggestion": "建议在 batchProcess() 外层添加 @Transactional（考虑使用 PlatformTransactionManager 编程式事务），或至少将成功/失败计数与数据库操作解耦，并记录失败的完整上下文以便重试。"
+  },
+  {
+    "issueTitle": "N+1 查询问题：单元列表和房屋列表查询中逐条查询关联表",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\service\\impl\\UnitServiceImpl.java",
+    "lineRange": "160-181",
+    "description": "UnitServiceImpl.toVO() 中通过 buildingMapper.selectById(entity.getBuildingId()) 逐条查询楼栋名称，在分页查询场景下会导致 N+1 查询。同样的问题也存在于 RoomServiceImpl.toVO() 中（逐条查 buildingMapper 和 unitMapper），以及 OwnerProfileController.getMyRooms()（每房间查 3 次 Mapper）。",
+    "suggestion": "建议使用 MyBatis-Plus 的 @TableName(autoResultMap=true) 配合关联查询，或在 Service 层先批量查出所有关联 ID 再用 selectBatchIds 一次性查询，然后在内存中组装。"
+  },
+  {
+    "issueTitle": "报告导出全量加载到内存可能导致 OOM",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\excel\\ReportExportService.java",
+    "lineRange": "67-85",
+    "description": "ReportExportService.exportMonthlyReport() 虽然分页查询数据库，但将所有数据累积到 allRows ArrayList 中（第 67 行），再在全量数据上进行分组聚合。当数据量达数万至数十万行时，allRows 会消耗大量堆内存，可能导致 OOM。",
+    "suggestion": "建议改为流式处理：从 DB 分页读取后直接写入 Excel 行，同时使用 Map 累积按楼栋分组的汇总数据（而非全量行数据），避免同时持有全部行对象。"
+  },
+  {
+    "issueTitle": "Excel 导出使用 MySQL 专有 LIMIT 语法，数据库移植性差",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\excel\\OwnerExcelService.java",
+    "lineRange": "46-51",
+    "description": "OwnerExcelService.exportExcel()、PaymentOrderExcelService.exportExcel()、ReportExportService.exportMonthlyReport() 均使用 MyBatis-Plus 的 .last(\"LIMIT ...\") 拼接 MySQL 特定 LIMIT/OFFSET 语法。此外，大偏移量分页（OFFSET 分页）性能会随数据量增长显著下降。",
+    "suggestion": "建议改用 MyBatis-Plus 的 Page 对象进行物理分页（Page 对象会自动适配数据库方言）；或使用基于游标的分页方式（如 orderBy id 加 where id > ?）。"
+  },
+  {
+    "issueTitle": "创建/修改操作中 createBy/updateBy 硬编码为 admin",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\service\\impl\\BuildingServiceImpl.java",
+    "lineRange": "88-122",
+    "description": "BuildingServiceImpl.create() 中 entity.setCreateBy(\"admin\") 和 update() 中 entity.setUpdateBy(\"admin\") 硬编码为 admin 字符串，未从当前安全上下文中获取真实操作人。这将导致审计日志无法追溯真正的操作人。",
+    "suggestion": "通过 SecurityUtil.requireUser().getUsername() 或类似方法获取当前登录用户。建议启用 MyBatis-Plus 的自动填充功能（MetaObjectHandler）统一处理 createBy/updateBy。"
+  },
+  {
+    "issueTitle": "业主端 Controller 注入两个不同包下的 PaymentOrderService",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-api\\src\\main\\java\\com\\property\\ownerapi\\controller\\OwnerPaymentController.java",
+    "lineRange": "34-35",
+    "description": "第 34 行使用全限定类名注入了 com.property.module.payment.service.PaymentOrderService（别名 paymentCreateService），第 35 行注入 com.property.module.bill.service.PaymentOrderService（别名 paymentOrderService）。这导致代码可读性差，容易混淆两个 Service 的职责边界。",
+    "suggestion": "建议统一两个 Service 的职责：将创建支付订单的逻辑移到 bill 模块的 PaymentOrderService 中，或使用更明确区分的类名（如 PaymentCreationService、PaymentQueryService）。"
+  },
+  {
+    "issueTitle": "业主端 @PathVariable Long id 未校验账单归属时存在空指针风险",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-api\\src\\main\\java\\com\\property\\ownerapi\\controller\\OwnerPaymentController.java",
+    "lineRange": "54-55",
+    "description": "第 54 行 if (bill.getOwnerId() == null || !bill.getOwnerId().equals(ownerId)) 中，如果 ownerId 为 null（SecurityUtil.requireUser() 返回的用户无 userId），会触发 NPE。虽然 SecurityUtil.requireUser() 理论上不会返回 null，但 getUserId() 可能为 null。",
+    "suggestion": "使用 java.util.Objects.equals(bill.getOwnerId(), ownerId) 进行安全比较；或确保 requireUser() 返回的 LoginUser.userId 不为 null。"
+  },
+  {
+    "issueTitle": "定时任务 OverdueScanJob 非事务执行，部分更新失败导致数据不一致",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-task\\src\\main\\java\\com\\property\\task\\job\\OverdueScanJob.java",
+    "lineRange": "79-87",
+    "description": "OverdueScanJob.scan() 中循环处理每笔逾期账单，分别调用 billMapper.markAsOverdue() 或 billMapper.updateLateFee()。如果处理到第 N 笔时报错退出，前 N-1 笔的修改已提交到数据库。由于没有外层事务，任务重复执行时可能出现某笔被标记逾期但罚息未更新的中间状态。",
+    "suggestion": "建议在 scan() 方法上添加 @Transactional(rollbackFor = Exception.class)，确保整个扫描操作原子性；或至少增加补偿/重试机制记录失败账单 ID 下次再处理。"
+  },
+  {
+    "issueTitle": "定时任务 OverdueNoticeJob 中 overdueNoticeJob 事务未包裹",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-task\\src\\main\\java\\com\\property\\task\\job\\OverdueNoticeJob.java",
+    "lineRange": "44-96",
+    "description": "OverdueNoticeJob.sendOverdueNotices() 在循环中逐业主发送邮件，发送成功/失败计数在内存中累加。没有事务控制意味着如果任务中途失败，部分业主已收到邮件，部分未收到，且没有发送日志记录在数据库中。",
+    "suggestion": "建议将邮件发送记录写入数据库表（如 t_notification_log），实现幂等重试和发送记录追溯。添加 @Transactional 保证发送日志和状态更新原子性。"
+  },
+  {
+    "issueTitle": "AdminFeeStandardController 未使用 DTO 封装分页参数",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminFeeStandardController.java",
+    "lineRange": "35-42",
+    "description": "与其他 Controller 使用 DTO 分页不同，AdminFeeStandardController.page() 直接使用 @RequestParam 分散接收 current、size 等参数，导致参数校验不一致、难以扩展。",
+    "suggestion": "建议创建 FeeStandardPageQuery 继承 PageQuery，统一分页参数管理。"
+  },
+  {
+    "issueTitle": "请求 DTO 缺少长度和格式约束校验",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\dto\\request\\RoomCreateRequest.java",
+    "lineRange": "1-49",
+    "description": "RoomCreateRequest 中 roomCode 仅使用 @NotBlank，但未限制长度（@Size）和格式（@Pattern）。同样的问题存在于几乎所有 Create/Update Request DTO 中，如 buildingCode（楼栋编号）、unitCode（单元编号）、phone（手机号）等字段。未限制长度的字符串可能导致数据库字段溢出或存储过大数据。",
+    "suggestion": "为所有字符串字段添加 @Size(max = ...) 约束，与数据库字段长度（如 VARCHAR(50)）保持一致。为手机号字段添加 @Pattern(regexp = \"^1[3-9]\\\\d{9}$\") 格式校验。"
+  },
+  {
+    "issueTitle": "数值型字段缺少范围校验",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\dto\\request\\RoomCreateRequest.java",
+    "lineRange": "30-36",
+    "description": "RoomCreateRequest 中 floor（楼层）、area（建筑面积）等字段仅使用 @NotNull，缺少 @Min/@Max 或 @DecimalMin/@DecimalMax 校验。负面值（如负数面积）可能写入数据库。同样问题存在于所有数值字段（sortOrder、totalFloors、status 等）。",
+    "suggestion": "添加范围约束：如 @Min(1) @Max(200) 对楼层、@DecimalMin(\"1.00\") @DecimalMax(\"10000.00\") 对面积。"
+  },
+  {
+    "issueTitle": "业主端账单查询存在数据泄露风险（越权确认不足）",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-api\\src\\main\\java\\com\\property\\ownerapi\\controller\\OwnerBillController.java",
+    "lineRange": "39-61",
+    "description": "OwnerBillController.page() 在查询业主名下房屋列表（roomIds）后，又通过 query.setOwnerId(ownerId) 设过滤条件。但 billService.page(query) 内部实现依赖于 ownerId 字段过滤。如果 BillService.page() 的实现未正确处理 ownerId 过滤（如未拼接 WHERE 条件），可能返回其他业主的账单数据。且 query 对象来自客户端，ownerId 虽被覆盖但其他参数（如 roomIds 客户端自定义）不可信。",
+    "suggestion": "建议在 Service 层强制注入 ownerId 白名单：使用查询到的 roomIds 作为 WHERE room_id IN (...) 而非依赖 ownerId 条件。删除 query.setOwnerId(ownerId) 并改为 query.setRoomIds(roomIds)。"
+  },
+  {
+    "issueTitle": "AdminParkingController.unbind 使用 POST + /unbind/{id} 路径，RESTful 不规范",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminParkingController.java",
+    "lineRange": "53-57",
+    "description": "unbind 操作使用 @PostMapping(\"/unbind/{id}\")，语义上解绑应属于 DELETE 操作。change 操作使用 @PutMapping(\"/change\")，也缺乏资源层级。",
+    "suggestion": "建议将 unbind 改为 @DeleteMapping(\"/{id}/binding\")，change 改为 @PutMapping(\"/{id}/binding\")，更符合 RESTful 资源嵌套规范。"
+  },
+  {
+    "issueTitle": "SecurityUtil.requireUser() 可能返回 null 时引发 NPE",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-owner-api\\src\\main\\java\\com\\property\\ownerapi\\controller\\OwnerProfileController.java",
+    "lineRange": "37-38",
+    "description": "OwnerProfileController.getProfile() 中 SecurityUtil.requireUser() 假设用户必登录，但如果拦截器未正确拦截或 token 异常时 getUserId() 可能返回 null。这会导致 NPE，且错误信息不明确。",
+    "suggestion": "建议使用 Optional 包装或提前判空：LoginUser user = SecurityUtil.requireUser(); if (user == null || user.getUserId() == null) { throw new AuthException(\"未登录\"); }。"
+  },
+  {
+    "issueTitle": "异常处理时吞掉了 parseLabel 中的 Birthday 解析异常",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\excel\\OwnerImportListener.java",
+    "lineRange": "157-162",
+    "description": "buildCreateRequest() 中解析生日使用了空 catch(Exception ignored)，如果日期格式不正确，birthday 会被静默置为 null，用户不会收到任何错误提示，可能导致导入的数据不完整。",
+    "suggestion": "在 validateRow() 中提前校验日期格式，或者在 catch 中将错误信息写入 row.setErrorMsg() 并标记校验失败。"
+  },
+  {
+    "issueTitle": "AdminPaymentController.syncPayment 使用 paymentNo 路径变量但未做校验",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminPaymentController.java",
+    "lineRange": "56-61",
+    "description": "@PostMapping(\"/{paymentNo}/sync\") 使用 @PathVariable String paymentNo，但未对 paymentNo 做任何格式或非空校验。空字符串或恶意构造的 paymentNo 可能导致意外的对账行为。",
+    "suggestion": "添加 @NotBlank 校验或正则约束：@PathVariable @Pattern(regexp = \"^[A-Z0-9]{16,32}$\") String paymentNo。"
+  },
+  {
+    "issueTitle": "BuildingServiceImpl.update() 和 create() 硬编码状态/排序回退值可能覆盖用户意图",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\service\\impl\\BuildingServiceImpl.java",
+    "lineRange": "115-119",
+    "description": "update() 和 create() 中大量使用三目运算符设置默认值（如 totalUnits != null ? request.getTotalUnits() : 0），如果客户端不传某些字段（设 null），会被强制覆盖为 0，丢失数据库原有值。同样的模式出现在 RoomServiceImpl、UnitServiceImpl 中。",
+    "suggestion": "对于 update 操作，应该只更新请求中确实提供的字段（仅非 null 的字段）。对于 create，默认值应基于业务语义而非随意设为 0。"
+  },
+  {
+    "issueTitle": "AdminDashboardController 的 period 参数未校验格式",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminDashboardController.java",
+    "lineRange": "32-39",
+    "description": "overview() 和 feeItemStats() 的 period 参数为 @RequestParam(required = false) String，但未校验输入的格式（期望 yyyy-MM）。错误格式的 period 可能导致 SQL 异常或被用作 SQL 注入向量。",
+    "suggestion": "添加 @Pattern(regexp = \"^\\\\d{4}-\\\\d{2}$\") 校验，或在 Service 层进行格式验证。"
+  },
+  {
+    "issueTitle": "AdminReportController.exportMonthly 将 HttpServletResponse 暴露给 Swagger",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminReportController.java",
+    "lineRange": "29-33",
+    "description": "exportMonthly() 使用 @Parameter(hidden = true) 隐藏 HttpServletResponse 参数，但 Swagger 仍可能暴露该端点。此外，period 参数无格式校验。",
+    "suggestion": "建议添加 period 格式校验 @RequestParam @Pattern(regexp = \"^\\\\d{4}-\\\\d{2}$\") String period。"
+  },
+  {
+    "issueTitle": "AdminBuildingController.page() 等分页方法未使用 @Valid 注解",
+    "filePath": "d:\\.workspace\\javaproject\\property-management-system\\property-management\\property-admin-api\\src\\main\\java\\com\\property\\adminapi\\controller\\AdminBuildingController.java",
+    "lineRange": "32-35",
+    "description": "page() 方法接收 BuildingPageQuery query 参数但未标注 @Valid。虽然 PageQuery 本身无校验注解，但如果未来在 query 字段上添加校验，将不会生效。同样的问题存在于所有 GET 分页接口。",
+    "suggestion": "为所有 GET 分页参数添加 @Valid 注解，确保参数校验框架生效。"
+  }
+]

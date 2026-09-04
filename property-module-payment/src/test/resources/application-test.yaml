@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:test-schema.sql
+      data-locations: classpath:test-data.sql
+
+mybatis-plus:
+  global-config:
+    db-config:
+      id-type: ASSIGN_ID
+
+# 关闭支付宝真实连接
+alipay:
+  app-id: mock-app-id
+  gateway: https://mock-gateway
+  merchant-private-key: mock-key
+  alipay-public-key: mock-key
+  notify-url: http://localhost/notify
+  return-url: http://localhost/return
