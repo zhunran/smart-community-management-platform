@@ -174,20 +174,6 @@ cd property-owner-web && npm install && npm run dev   # 业主端 :5273
 
 > RAG 检索增强暂搁置，后续可通过取消注释 `AiConfig` 和 `pom.xml` 中标记的代码恢复。
 
-## 项目文档
-
-| 文档         | 路径                                                    |
-| ------------ | ------------------------------------------------------- |
-| 业务全景     | `docs/summary/业务全景.md`                              |
-| 架构设计     | `docs/summary/架构设计.md`                              |
-| 技术栈       | `docs/summary/技术栈.md`                                |
-| 关键实现逻辑 | `docs/summary/关键实现逻辑.md`                          |
-| 启动指南     | `docs/setup/startup-guide.md`                           |
-| 升级计划     | `docs/update-plan-0816/upgrade-plan.md`                 |
-| AI 增强手册  | `docs/update-plan-0816/phase5-ai-enhancement-manual.md` |
-| AI 修复指南  | `docs/update-plan-0816/ai-fix-guide.md`                 |
-| 面试问题清单 | `docs/summary/面试问题清单.md`                          |
-
 ## License
 
 MIT
