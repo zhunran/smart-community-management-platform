@@ -52,4 +52,14 @@
         </dependency>
     </dependencies>
 
+    <build>
+        <plugins>
+            <!-- 显式声明 maven-compiler-plugin，继承父 POM pluginManagement 中注解处理器配置（Lombok 等） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

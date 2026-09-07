@@ -50,6 +50,11 @@ temp-excel/
 bcrypt7_*.txt
 problem.md
 
+# ==================== 开源仓库清理（构件与审查报告不入库） ====================
+xxl-job-admin/*.jar
+review-report.json
+property-owner-web/code-review-report.json
+
 # ==================== 项目文档（不对外公开） ====================
 docs/
 
