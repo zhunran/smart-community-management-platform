@@ -3,6 +3,7 @@ package com.property.module.ai.config;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.tool.ToolCallbackProvider;
 // RAG 相关（暂搁置）：
 // import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 // import org.springframework.ai.embedding.EmbeddingModel;
@@ -33,9 +34,12 @@ public class AiConfig {
      * 注入 ChatClient.Builder（Spring AI 自动配置）和 ChatMemory（自动配置）
      */
     @Bean
-    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory) {
+    public ChatClient chatClient(ChatClient.Builder builder, ChatMemory chatMemory,
+                                 ToolCallbackProvider toolCallbackProvider) {
         return builder
                 .defaultAdvisors(MessageChatMemoryAdvisor.builder(chatMemory).build())
+                // 挂载业务数据查询工具（账单、房屋、公告等），让模型能主动调用查库
+                .defaultTools(toolCallbackProvider)
                 // RAG 相关（暂搁置）：QuestionAnswerAdvisor 检索增强，待 RAG 恢复时取消注释
                 // , QuestionAnswerAdvisor.builder(vectorStore).build()
                 .build();

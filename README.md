@@ -124,6 +124,9 @@ ALIPAY_ALIPAY_PUBLIC_KEY=...
 
 # 可选：AI 客服
 DEEPSEEK_API_KEY=sk-xxx
+
+# 可选：DocQuery RAG（社区规章知识库问答，默认关闭）
+DOCQUERY_API_KEY=your_docquery_api_key   # 需与 DocQuery 服务端 ADMIN_API_KEY 一致
 ```
 
 ### 3. 编译启动
@@ -172,7 +175,22 @@ cd property-owner-web && npm install && npm run dev   # 业主端 :5273
 
 对话记忆由 Redis 持久化，支持 SSE 流式输出。
 
-> RAG 检索增强暂搁置，后续可通过取消注释 `AiConfig` 和 `pom.xml` 中标记的代码恢复。
+### DocQuery RAG 增强（可选）
+
+AI 客服集成了自研 RAG 服务 [DocQuery](https://github.com/zhunran/DocQuery)，用于社区规章/流程类问题的知识库问答：
+
+- **意图路由**：关键词粗分流——业务查询（账单/房屋/公告）走主链路查库，规章流程咨询（装修/报修流程/收费标准等）走 DocQuery RAG
+- **硬约束**：DocQuery 宕机/异常时通过 `onErrorResume` 自动回退主链路，前端始终收到完整回答，绝无空白
+- **配置**：`property-owner-api/src/main/resources/application.yml` 中 `docquery.enabled=true` 开启，`docquery.base-url` 指向 DocQuery 服务地址
+
+| 配置项                    | 默认值                  | 说明                                          |
+| ------------------------- | ----------------------- | --------------------------------------------- |
+| `docquery.enabled`        | `false`                 | 是否启用 RAG 分支                             |
+| `docquery.base-url`       | `http://localhost:8000` | DocQuery 服务地址                             |
+| `docquery.api-key`        | `${DOCQUERY_API_KEY:}`  | API Key（需与 DocQuery `ADMIN_API_KEY` 一致） |
+| `docquery.knowledge-base` | `shanggongyuan`         | 知识库名称                                    |
+| `docquery.rag-mode`       | `basic`                 | RAG 模式（basic/hyde/crag/self_rag）          |
+| `docquery.read-timeout`   | `30000`                 | 流式读取超时（ms，推理模型建议 ≥60000）       |
 
 ## License
 

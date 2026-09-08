@@ -23,6 +23,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
+import org.springframework.beans.factory.ObjectProvider;
+
+import com.property.module.ai.client.DocQueryClient;
+import com.property.module.ai.config.DocQueryProperties;
+import com.property.module.ai.router.AiIntent;
+import com.property.module.ai.router.AiIntentRouter;
+
 /**
  * AI 客服服务
  *
@@ -51,6 +58,10 @@ public class AiChatService {
     private final SysConfigService sysConfigService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final ChatSessionMapper chatSessionMapper;
+    private final AiIntentRouter intentRouter;
+    private final DocQueryProperties docQueryProperties;
+    /** DocQueryClient 为 @ConditionalOnProperty 可选 Bean，使用 ObjectProvider 避免关闭时启动失败 */
+    private final ObjectProvider<DocQueryClient> docQueryClientProvider;
 
     // ==================== 会话管理 ====================
 
@@ -140,7 +151,33 @@ public class AiChatService {
         // 保存用户消息到历史
         saveHistory(request.getUserId(), sid, "user", request.getMessage());
 
-        // 构建 Prompt 并流式调用
+        // 意图路由 + 双路径分流（RAG 仅作为可选增强路径，任何失败都回退主链路）
+        AiIntent intent = intentRouter.route(userMessage);
+
+        // 当 docquery.enabled=true 时才解析 DocQueryClient；否则为 null，永不走 RAG 分支
+        DocQueryClient docQueryClient = docQueryProperties.isEnabled() ? docQueryClientProvider.getIfAvailable() : null;
+
+        if (intent == AiIntent.REGULATION && docQueryClient != null) {
+            log.info("AI路由：REGULATION → DocQuery RAG[userId={}, sessionId={}]", request.getUserId(), sid);
+            // DocQuery 流式（客户端内部已带 connect/read 超时 + 异常空流兜底）；
+            // 此处再叠一层 onErrorResume：连接失败/超时/流异常 → 完整回退主链路，保证 AI 客服可用
+            return docQueryClient.chatStream(userMessage, String.valueOf(sid))
+                    .onErrorResume(e -> {
+                        log.warn("DocQuery 异常，回退主链路[sessionId={}]：{}", sid, e.getMessage());
+                        return mainChainFlux(systemPrompt, userMessage, sid, request.getUserId());
+                    });
+        }
+
+        // 默认走主链路：ChatClient + 会话记忆 + 工具（CommunityInfoTool 查库）
+        return mainChainFlux(systemPrompt, userMessage, sid, request.getUserId());
+    }
+
+    /**
+     * 主链路流式调用：ChatClient + 会话记忆（+ 已挂载的 CommunityInfoTool 查库）。
+     *
+     * <p>与原有同步对话逻辑保持一致，产出统一 {@code Flux<String>} 逐 token 输出。</p>
+     */
+    private Flux<String> mainChainFlux(String systemPrompt, String userMessage, Long sid, Long userId) {
         return chatClient.prompt()
                 .system(systemPrompt)
                 .user(userMessage)
@@ -148,7 +185,7 @@ public class AiChatService {
                 .advisors(a -> a.param(ChatMemory.CONVERSATION_ID, sid))
                 .stream()
                 .content()
-                .doOnError(e -> log.error("AI对话异常【userId={}, sessionId={}】", request.getUserId(), sid, e));
+                .doOnError(e -> log.error("AI对话异常【userId={}, sessionId={}】", userId, sid, e));
     }
 
     /**

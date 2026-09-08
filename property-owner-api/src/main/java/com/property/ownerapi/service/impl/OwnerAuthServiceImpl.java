@@ -11,6 +11,7 @@ import com.property.ownerapi.dto.response.OwnerLoginResponse;
 import com.property.ownerapi.service.OwnerAuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,12 @@ public class OwnerAuthServiceImpl implements OwnerAuthService {
 
     private final OwnerMapper ownerMapper;
     private final PasswordEncoder passwordEncoder;
+
+    /**
+     * 验证码跳过开关（仅联调/测试环境开启，生产必须为 false）
+     */
+    @Value("${auth.captcha.skip:false}")
+    private boolean captchaSkip;
 
     @Override
     public OwnerLoginResponse login(OwnerLoginRequest request) {
@@ -74,6 +81,10 @@ public class OwnerAuthServiceImpl implements OwnerAuthService {
 
     @Override
     public void verifyCaptcha(String sessionCaptcha, String inputCaptcha) {
+        if (captchaSkip) {
+            log.warn("【联调模式】验证码校验已跳过（auth.captcha.skip=true），生产环境请关闭");
+            return;
+        }
         if (sessionCaptcha == null || !sessionCaptcha.equalsIgnoreCase(inputCaptcha.trim())) {
             throw new BusinessException(ErrorCode.CAPTCHA_ERROR);
         }

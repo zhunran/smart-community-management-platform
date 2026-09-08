@@ -42,6 +42,17 @@ spring:
       embedding:
         enabled: false
 
+# DocQuery（自研 RAG）配置：可选增强路径，默认关闭。
+# enabled=false 时 DocQueryClient 完全不加载，AI 客服行为与改造前完全一致（RAG 宕机不影响）。
+docquery:
+  enabled: true
+  base-url: http://localhost:8000
+  api-key: ${DOCQUERY_API_KEY:}
+  connect-timeout: 5000
+  read-timeout: 60000
+  rag-mode: basic
+  knowledge-base: shanggongyuan
+
 mybatis-plus:
   global-config:
     banner: false
@@ -84,6 +95,11 @@ jwt:
   secret: ${JWT_OWNER_SECRET}
   expiration: ${JWT_EXPIRATION}
   refresh-expiration: ${JWT_REFRESH_EXPIRATION}
+
+# 联调开关：跳过登录验证码校验（仅本地联调用，生产必须 false）
+auth:
+  captcha:
+    skip: false
 management:
   endpoints:
     web:
@@ -93,4 +109,4 @@ management:
     health:
       show-details: always
       probes:
-        enabled: true  # 启用就绪探针 / 存活探针
+        enabled: true # 启用就绪探针 / 存活探针
